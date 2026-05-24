@@ -3,6 +3,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.Net;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Web;
 using UnityEngine;
 using UnityEngine.Networking;
@@ -67,7 +68,6 @@ public class YouTubeLiveController : MonoBehaviour
     public void StartAuth()
     {
         var text = APIKeyManager.Instance.LoadFile("youtube");
-
         this.apiKey = JsonUtility.FromJson<APIKey>(text);
 
         var web = this.apiKey.web;
@@ -80,8 +80,8 @@ public class YouTubeLiveController : MonoBehaviour
 
         // URIとクエリをマージ
         var uriBuilder = new System.UriBuilder(web.auth_uri) {
-			Query = queryString.ToString()
-		};
+            Query = queryString.ToString()
+        };
         var auth_uri = uriBuilder.Uri.ToString();
 
         Debug.Log($"authUrl: {auth_uri}");

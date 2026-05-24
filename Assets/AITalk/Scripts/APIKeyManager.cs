@@ -2,6 +2,9 @@ using System.Collections.Generic;
 using UnityEngine;
 using SFB;
 using UnityEngine.Networking;
+using System;
+using System.Threading.Tasks;
+using System.IO;
 
 public class APIKeyManager : MonoBehaviour
 {
@@ -75,17 +78,7 @@ public class APIKeyManager : MonoBehaviour
     public string LoadFile(string key)
     {
         string filePath = this.keyPaths[key];
-        using (var uwr = UnityWebRequest.Get(filePath))
-        {
-            uwr.SendWebRequest();
-            if (uwr.result != UnityWebRequest.Result.Success)
-            {
-                 Debug.LogError(uwr.error);
-                 return "";
-            }
-
-            string text = uwr.downloadHandler.text;
-            return text;
-        }
+        string text = File.ReadAllText(filePath);
+        return text;
     }
 }
