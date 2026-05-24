@@ -2,16 +2,53 @@ using System.Collections.Generic;
 using UnityEngine;
 using SFB;
 using UnityEngine.Networking;
-using System.Collections;
-using UnityEngine.Events;
-using UnityEngine.InputSystem;
-using System;
 
 public class APIKeyManager : MonoBehaviour
 {
+    [System.Serializable]
+    public class KeyValue
+    {
+        public string key;
+        public string value;
+    }
+
+    [System.Serializable]
+    public class SerializableDictionary
+    {
+        public List<KeyValue> keyValues = new List<KeyValue>();
+            // インデクサーの定義
+        public string this[string key]
+        {
+            get
+            { 
+                var finded = keyValues.Find(entry => entry.key == key);
+                if(finded == null)
+                {
+                    Debug.LogWarning($"key:{key} が辞書内に存在しません");
+                    return null;
+                }
+                return finded.value;
+            }
+            set 
+            { 
+                var finded = keyValues.Find(entry => entry.key == key);
+                if(finded == null)
+                {
+                    var entry = new KeyValue();
+                    entry.key = key;
+                    entry.value = value;
+                    keyValues.Add(entry);
+                    return;
+                }
+                finded.value = value; 
+            } 
+        }
+    }
+
+
     public static APIKeyManager Instance;
     
-    private Dictionary<string, string> keyPaths = new Dictionary<string, string>();
+    public SerializableDictionary keyPaths = new SerializableDictionary();
 
     private void Awake()
     {
@@ -25,56 +62,30 @@ public class APIKeyManager : MonoBehaviour
         }
     }
 
-    public void AddFileByOpen(string key)
+    public void AddFileByPanel(string key)
     {
         var extensions = new[]
         {
-            new ExtensionFilter( "API Key Files", "json"),
+            new ExtensionFilter( "API Key Files", "txt", "json"),
         };
         var paths = StandaloneFileBrowser.OpenFilePanel("Select API Key File", "", extensions, false);
-        this.keyPaths.Add(key, paths[0]);
+        this.keyPaths[key] = paths[0];
     }
 
-    private IEnumerator LoadRoutine<T>(string uri, UnityAction<T> callback) {
-        using (var uwr = UnityWebRequest.Get(uri))
+    public string LoadFile(string key)
+    {
+        string filePath = this.keyPaths[key];
+        using (var uwr = UnityWebRequest.Get(filePath))
         {
-            yield return uwr.SendWebRequest();
+            uwr.SendWebRequest();
             if (uwr.result != UnityWebRequest.Result.Success)
             {
                  Debug.LogError(uwr.error);
+                 return "";
             }
-            else
-            {
-                string text = uwr.downloadHandler.text;
-                T jsonObject = JsonUtility.FromJson<T>(text);
 
-                // 読み込み完了のコールバックを実行
-                callback(jsonObject);
-            }
+            string text = uwr.downloadHandler.text;
+            return text;
         }
-    }
-
-    /// <summary>
-    /// 登録されているJSONファイルの中から、目的のファイルを探索する
-    /// </summary>
-    /// <typeparam name="T">パーズするJSON クラス</typeparam>
-    /// <param name="key">jsonファイルの名前</param>
-    /// <param name="callback">見つかった場合に呼び出す関数</param>
-    public void FindAPIKey<T>(string key, UnityAction<T> callback)
-    {
-        string filePath = "";
-        if (keyPaths.TryGetValue(key, out filePath))
-        {
-            StartCoroutine(LoadRoutine<T>(filePath, callback));
-        }
-        else
-        {
-            Debug.LogWarning($"指定したkey({key})が存在しません");
-        }
-    }
-
-    public void OnClick()
-    {
-        AddFileByOpen("youtube");
     }
 }

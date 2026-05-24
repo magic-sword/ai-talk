@@ -2,17 +2,14 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
-using System.Text.RegularExpressions;
 using System.Threading;
 using System.Web;
 using UnityEngine;
 using UnityEngine.Networking;
-using TMPro;
 
 public class YouTubeLiveController : MonoBehaviour
 {
     public int port = 8081;
-    public TextMeshProUGUI APIKeyText;
 
     /// <summary>
     /// Youtubeへの認証情報に必要なデータ
@@ -69,16 +66,11 @@ public class YouTubeLiveController : MonoBehaviour
 
     public void StartAuth()
     {
-        APIKeyManager.Instance.FindAPIKey<APIKey>("youtube", OnSetAPIKey);
-    }
+        var text = APIKeyManager.Instance.LoadFile("youtube");
 
-    private void OnSetAPIKey(APIKey key)
-    {
-        // UIに表示
-        APIKeyText.text = JsonUtility.ToJson(key);
-        this.apiKey = key;
+        this.apiKey = JsonUtility.FromJson<APIKey>(text);
 
-        var web = key.web;
+        var web = this.apiKey.web;
         var queryString = System.Web.HttpUtility.ParseQueryString("");
         queryString.Add("response_type", "code");  // 認証コードの返却パラメータを指定
         queryString.Add("client_id", web.client_id);  // アプリケーションのクライアント ID
