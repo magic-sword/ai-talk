@@ -8,10 +8,10 @@ using UnityEngine;
 [Serializable]
 public class APIKey
 {
-    public Web web;
+    public Installed installed;
     
     [Serializable]
-    public class Web
+    public class Installed
     {
         public string client_id;
         public string project_id;

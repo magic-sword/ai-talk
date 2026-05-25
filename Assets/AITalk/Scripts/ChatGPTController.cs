@@ -143,6 +143,14 @@ public class ChatGPTController : MonoBehaviour
         await RequestAsync(this.testMessage);
     }
 
+    public void RequestMessage(string message)
+    {
+        Task.Run(async () =>
+        {
+            var res = await RequestAsync(message);
+        });
+    }
+
     [Serializable]
     public class ChatGPTMessageModel
     {

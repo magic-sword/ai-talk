@@ -6,6 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using UnityEngine;
+using UnityEngine.Events;
 using UnityEngine.Networking;
 
 public class YouTubeLiveController : MonoBehaviour
@@ -13,47 +14,56 @@ public class YouTubeLiveController : MonoBehaviour
     public int port = 8081;
 
     /// <summary>
+    /// 認証完了時のリダイレクトを受け取るリスナー
+    /// </summary>
+    private HttpListener listener = new HttpListener();
+
+    /// <summary>
+    /// 認証完了時にWebブラウザへ表示するHTMLファイル
+    /// </summary>
+    public TextAsset completedHTML;
+
+    /// <summary>
     /// Youtubeへの認証情報に必要なデータ
     /// 機密情報なため、外部ファイルとして保管しGit上にはコミットしない
     /// </summary>
     private APIKey apiKey;
 
+    private string authCode = ""; // API Keyから取得した認証コード
+
     public string liveId = "xxx";
 
-    private SynchronizationContext mainContext;
+    private string chatId = ""; // 配信中のチャットID
 
-    [Serializable]
-    public class Token
+    private Token token = null; // 認証コードから取得されるトークン
+    /// <summary>
+    /// 配信中のライブリスト
+    /// </summary>
+    public List<LiveBroadcast> liveList = new List<LiveBroadcast>();
+    private SynchronizationContext mainContext; // Unityのライフサイクルに戻るためのメインスレッド
+
+    /// <summary>
+    /// Youtube配信からコメントを受け取った場合に通知する
+    /// </summary>
+    public OnCommentEvent onCommentEvent;
+
+    private string RedirectUri
     {
-        public string access_token;
+        get
+        {
+            // リダイレクトを受け取るポート番号が競合しないように指定しておく
+            return $"{this.apiKey.installed.redirect_uris[0]}:{port}/";
+        }
     }
 
-    [Serializable]
-    public class LiveBroadcast
+    /// <summary>
+    /// 認証情報でヘッダーに記載する必要がある文字列
+    /// </summary>
+    private string Authorization
     {
-        public Item[] items;
-
-        public string nextPageToken;
-
-        [Serializable]
-        public class Item
+        get
         {
-            public Snippet snippet;
-
-            public Author authorDetails;
-
-            [Serializable]
-            public class Snippet
-            {
-                public string liveChatId;
-                public string displayMessage;
-            }
-
-            [Serializable]
-            public class Author
-            {
-                public string displayName;
-            }
+            return $"Bearer {token.access_token}";
         }
     }
 
@@ -64,115 +74,262 @@ public class YouTubeLiveController : MonoBehaviour
         // メインスレッドで実行しておく
         mainContext = SynchronizationContext.Current;
     }
+    
+    private IEnumerator WaitRedirectRoutine()
+    {
+        listener.Prefixes.Add(this.RedirectUri);
+        listener.Start();
 
+        try
+        {
+            
+            // リダイレクト待機
+            Task<HttpListenerContext> task = listener.GetContextAsync();
+            yield return new WaitUntil(() => task.IsCompleted);
+            HttpListenerContext context = task.Result;
+            
+            // 結果受け取り
+            var queryParams = HttpUtility.ParseQueryString(context.Request.Url.Query);
+            this.authCode = queryParams["code"];
+
+            // ブラウザへ応答
+            byte[] buffer = completedHTML.bytes;
+            context.Response.ContentLength64 = buffer.Length;
+            yield return context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
+            context.Response.OutputStream.Close();
+        }
+        finally
+        {
+            listener.Stop();
+        }
+    }
     public void StartAuth()
     {
         var text = APIKeyManager.Instance.LoadFile("youtube");
         this.apiKey = JsonUtility.FromJson<APIKey>(text);
 
-        var web = this.apiKey.web;
-        var queryString = System.Web.HttpUtility.ParseQueryString("");
+        var web = this.apiKey.installed;
+        var queryString = HttpUtility.ParseQueryString("");
         queryString.Add("response_type", "code");  // 認証コードの返却パラメータを指定
         queryString.Add("client_id", web.client_id);  // アプリケーションのクライアント ID
-        queryString.Add("redirect_uri", web.redirect_uris[0]);  // 認可フロー完了後にリダイレクトする場所を指定
+        queryString.Add("redirect_uri", this.RedirectUri);  // 認可フロー完了後にリダイレクトする場所を指定
         queryString.Add("scope", "https://www.googleapis.com/auth/youtube.readonly");  // アクセスするリソースを指定
         queryString.Add("access_type", "offline"); // アクセストークンの更新が必要になったとき、ユーザーがブラウザにいなくても更新可能にする
 
         // URIとクエリをマージ
-        var uriBuilder = new System.UriBuilder(web.auth_uri) {
+        var uriBuilder = new UriBuilder(web.auth_uri) {
             Query = queryString.ToString()
         };
         var auth_uri = uriBuilder.Uri.ToString();
 
         Debug.Log($"authUrl: {auth_uri}");
         Application.OpenURL(auth_uri);
+
+        // 認証完了後のリダイレクトを待機
+        StartCoroutine(WaitRedirectRoutine());
     }
 
-    public void onReceiveAuthCode(HttpListenerContext context)
+
+    private IEnumerator SendWebRequest(UnityWebRequest request)
     {
-        Debug.Log($"onReceiveAuthCode:{context}");
-        var req = context.Request;
+        yield return request.SendWebRequest();
 
-        var queryParams = HttpUtility.ParseQueryString(req.Url.Query);
-        var code = queryParams["code"];
-
-        // asynchronously メインスレッドで実行
-        mainContext.Post((_) =>
+        if(request.result == UnityWebRequest.Result.Success)
         {
-            try
-            {
-                StartCoroutine(GetTokenCoroutine(queryParams["code"]));
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(e);
-            }
-        }, null);
+            yield break;
+        }
 
+        // エラー内容を出力
+        Debug.LogError(request.downloadHandler.text);
     }
-    IEnumerator GetTokenCoroutine(string authCode)
+
+    public void StartLive()
     {
-        var web = this.apiKey.web;
+        StartCoroutine(RequestLiveRoutine());
+    }
+
+    private IEnumerator RequestLiveRoutine()
+    {
+        yield return RequestToken();
+        yield return RequesLiveList();
+    }
+    private IEnumerator RequestToken()
+    {
+        var web = this.apiKey.installed;
         var tokenUrl = "https://oauth2.googleapis.com/token";
         var content = new Dictionary<string,string> () {
-            { "code", authCode },
+            { "code", this.authCode },
             { "client_id", web.client_id },
             { "client_secret", web.client_secret },
-            { "redirect_uri",  web.redirect_uris[0] },
+            { "redirect_uri",  this.RedirectUri },
             { "grant_type", "authorization_code" },
             { "access_type", "offline" },
         };
-        var request = UnityWebRequest.Post (tokenUrl, content);
-        yield return request.SendWebRequest();
+        var req = UnityWebRequest.Post (tokenUrl, content);
+        yield return SendWebRequest(req);
 
-        var token = JsonUtility.FromJson<Token>(request.downloadHandler.text).access_token;
+        this.token = JsonUtility.FromJson<Token>(req.downloadHandler.text); 
+    }
 
-        Debug.Log (token);
-        // Youtube配信APIへアクセスするため、Live Streaming API/List のリクエストを設定
+    /// <summary>
+    /// 自分が配信中のライブ一覧を取得する
+    /// アクセストークンの事前取得が必要
+    /// </summary>
+    /// <returns></returns>
+    private IEnumerator RequesLiveList()
+    {
         // GETパラメータを構築
-        var queryString = System.Web.HttpUtility.ParseQueryString("");
-        queryString.Add("part", "snippet");  // レスポンスに含めるリソースプロパティ(カンマ区切り)
-        queryString.Add("id", this.liveId);  // YouTube配信ID
+        var queryString = HttpUtility.ParseQueryString("");
+        queryString.Add("part", "snippet,status");  // レスポンスに含めるリソースプロパティ(カンマ区切り)
+        queryString.Add("mine", "true");  // フィルタ:認証されたユーザーが所有する
 
         // URIとクエリをマージ
 		var uriBuilder = new System.UriBuilder("https://www.googleapis.com/youtube/v3/liveBroadcasts") {
 			Query = queryString.ToString()
 		};
 
-        var req = UnityWebRequest.Get (uriBuilder.Uri);
-        req.SetRequestHeader ("Authorization", "Bearer " + token);
-        yield return  req.SendWebRequest();
+        using var req = UnityWebRequest.Get(uriBuilder.Uri);
+        
+        req.SetRequestHeader ("Authorization", this.Authorization);
+        yield return SendWebRequest(req);
 
-        var liveBroadcast = JsonUtility.FromJson<LiveBroadcast> (req.downloadHandler.text);
-
-        var chatId = liveBroadcast.items[0].snippet.liveChatId;
-
-        Debug.Log (chatId);
-
-        var url = "https://www.googleapis.com/youtube/v3/liveChat/messages?part=snippet,authorDetails";
-        url += "&liveChatId=" + chatId;
-
-        req = UnityWebRequest.Get (url);
-        req.SetRequestHeader ("Authorization", "Bearer " + token);
-        yield return req.SendWebRequest();
-
-        var liveChat = JsonUtility.FromJson<LiveBroadcast> (req.downloadHandler.text);
-        var items = liveChat.items;
-
-        foreach (var item in items) {
-        var snip = item.snippet;
-        var author = item.authorDetails;
-        Debug.Log (author.displayName + ": "
-            + snip.displayMessage);
-        }
-        Debug.Log (liveChat.nextPageToken);
+        var resource = JsonUtility.FromJson<BroadcastResource>(req.downloadHandler.text); 
+        this.liveList = new List<LiveBroadcast>(resource.items);
     }
 
+    /// <summary>
+    /// YouTube Live Streaming APIを使って、ライブ中のチャットのIDを取得する
+    /// 配信中のライブIDの指定が必要
+    /// 認証された接続トークンを取得しておく必要がある
+    /// </summary>
+    private IEnumerator RequestChatId()
+    {
+        // GETパラメータを構築
+        var queryString = HttpUtility.ParseQueryString("");
+        queryString.Add("part", "snippet");  // レスポンスに含めるリソースプロパティ(カンマ区切り)
+        queryString.Add("id", this.liveId);  // ライブID
+
+        // URIとクエリをマージ
+		var uriBuilder = new System.UriBuilder("https://www.googleapis.com/youtube/v3/liveBroadcasts") {
+			Query = queryString.ToString()
+		};
+
+        var req = UnityWebRequest.Get(uriBuilder.Uri);
+        req.SetRequestHeader ("Authorization", this.Authorization);
+        yield return SendWebRequest(req);
+        var liveBroadcast = JsonUtility.FromJson<BroadcastResource> (req.downloadHandler.text);
+
+        this.chatId = liveBroadcast.items[0].snippet.liveChatId;
+    }
+
+    private IEnumerator RequestCommentRoutine()
+    {
+        Debug.Log("Start RequestCommentRoutine");
+
+        yield return RequestToken();
+        yield return RequestChatId();
+
+        string page_token = "";
+        while (this.enabled)
+        {
+            // GETパラメータを構築
+            var queryString = HttpUtility.ParseQueryString("");
+            queryString.Add("part", "snippet,authorDetails"); // レスポンスに含めるリソースプロパティ(カンマ区切り)
+            queryString.Add("liveChatId", this.chatId);  // コメントを取得する対象のチャット
+            queryString.Add("page_token", page_token);  // ページトークンを指定することで、前回からの差分コメントのみ取得できる
+
+            // URIとクエリをマージ
+            var uriBuilder = new UriBuilder("https://www.googleapis.com/youtube/v3/liveChat/messages") {
+                Query = queryString.ToString()
+            };
+            
+            var req = UnityWebRequest.Get(uriBuilder.Uri);
+            req.SetRequestHeader ("Authorization", this.Authorization);
+            yield return SendWebRequest(req);
+
+            var liveChat = JsonUtility.FromJson<BroadcastResource> (req.downloadHandler.text);
+            var comment = FormatComment(liveChat.items);
+            if(comment != "")
+            {
+                Debug.Log($"Receve Comments:\n {comment}");
+                this.onCommentEvent.Invoke(comment);    // コメントの取得を通知
+            }
+
+            page_token = liveChat.nextPageToken;
+            yield return new WaitForSeconds(1); // ループ処理を1秒待機
+        }
+    }
+
+    /// <summary>
+    /// 受け取ったコメントを1つの文字列にまとめる
+    /// コメント:(リスナー表示名)「コメント内容」
+    /// </summary>
+    /// <param name="items"></param>
+    /// <returns></returns>
+    private string FormatComment(LiveBroadcast[] items)
+    {
+        var comment = "";
+
+        foreach (var item in items) {
+            var snip = item.snippet;
+            var author = item.authorDetails;
+
+            comment += $"コメント:({author.displayName})「{snip.displayMessage}」\n";
+        }
+        return comment;
+    }
 
 
     // Update is called once per frame
     void Update()
     {
         
+    }
+
+    [System.Serializable]
+    public class OnCommentEvent : UnityEvent<string> { }
+
+
+    [Serializable]
+    public class Token
+    {
+        public string access_token;
+    }
+
+    [Serializable]
+    public class BroadcastResource
+    {
+        public LiveBroadcast[] items;
+        public string nextPageToken;
+    }
+
+    [Serializable]
+    public class LiveBroadcast
+    {
+        public Snippet snippet;
+        public Author authorDetails;
+    }
+
+    [Serializable]
+    public class Snippet
+    {
+        public string title;
+        public string liveChatId;
+        public string displayMessage;
+        public Thumbnail[] thumbnails;
+    }
+
+    [Serializable]
+    public class Author
+    {
+        public string displayName;
+    }
+
+    [Serializable]
+    public class Thumbnail
+    {
+        public string url;
+        public int width;
+        public int  height;
     }
 }
