@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using UnityEngine;
 
 /// <summary>
 /// API KeyをJSONデータと変換しやすくするために定義するクラス

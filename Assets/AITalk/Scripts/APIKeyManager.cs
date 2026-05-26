@@ -1,9 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
 using SFB;
-using UnityEngine.Networking;
-using System;
-using System.Threading.Tasks;
 using System.IO;
 
 public class APIKeyManager : MonoBehaviour

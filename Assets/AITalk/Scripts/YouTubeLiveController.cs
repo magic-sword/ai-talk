@@ -8,6 +8,7 @@ using System.Web;
 using UnityEngine;
 using UnityEngine.Events;
 using UnityEngine.Networking;
+using Newtonsoft.Json;
 
 public class YouTubeLiveController : MonoBehaviour
 {
@@ -36,16 +37,17 @@ public class YouTubeLiveController : MonoBehaviour
     private string chatId = ""; // 配信中のチャットID
 
     private Token token = null; // 認証コードから取得されるトークン
-    /// <summary>
-    /// 配信中のライブリスト
-    /// </summary>
-    public List<LiveBroadcast> liveList = new List<LiveBroadcast>();
     private SynchronizationContext mainContext; // Unityのライフサイクルに戻るためのメインスレッド
 
     /// <summary>
     /// Youtube配信からコメントを受け取った場合に通知する
     /// </summary>
-    public OnCommentEvent onCommentEvent;
+    public  UnityEvent<string> onCommentEvent;
+
+    /// <summary>
+    /// Youtube配信一覧を取得した場合に通知する
+    /// </summary>
+    public  UnityEvent<List<LiveBroadcast>> onLiveList;
 
     private string RedirectUri
     {
@@ -79,10 +81,8 @@ public class YouTubeLiveController : MonoBehaviour
     {
         listener.Prefixes.Add(this.RedirectUri);
         listener.Start();
-
         try
         {
-            
             // リダイレクト待機
             Task<HttpListenerContext> task = listener.GetContextAsync();
             yield return new WaitUntil(() => task.IsCompleted);
@@ -193,8 +193,8 @@ public class YouTubeLiveController : MonoBehaviour
         req.SetRequestHeader ("Authorization", this.Authorization);
         yield return SendWebRequest(req);
 
-        var resource = JsonUtility.FromJson<BroadcastResource>(req.downloadHandler.text); 
-        this.liveList = new List<LiveBroadcast>(resource.items);
+        var resource = JsonConvert.DeserializeObject<BroadcastResource>(req.downloadHandler.text);
+        this.onLiveList.Invoke(new List<LiveBroadcast>(resource.items));
     }
 
     /// <summary>
@@ -286,9 +286,6 @@ public class YouTubeLiveController : MonoBehaviour
         
     }
 
-    [System.Serializable]
-    public class OnCommentEvent : UnityEvent<string> { }
-
 
     [Serializable]
     public class Token
@@ -316,7 +313,7 @@ public class YouTubeLiveController : MonoBehaviour
         public string title;
         public string liveChatId;
         public string displayMessage;
-        public Thumbnail[] thumbnails;
+        public Dictionary<string, Thumbnail> thumbnails; // key: サムネイル名
     }
 
     [Serializable]
