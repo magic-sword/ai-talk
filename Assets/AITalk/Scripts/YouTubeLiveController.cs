@@ -251,7 +251,7 @@ public class YouTubeLiveController : MonoBehaviour
             req.SetRequestHeader ("Authorization", this.Authorization);
             yield return SendWebRequest(req);
 
-            var liveChat = JsonUtility.FromJson<BroadcastResource> (req.downloadHandler.text);
+            var liveChat = JsonUtility.FromJson<MessagesResource> (req.downloadHandler.text);
             var comment = FormatComment(liveChat.items);
             if(comment != "")
             {
@@ -270,7 +270,7 @@ public class YouTubeLiveController : MonoBehaviour
     /// </summary>
     /// <param name="items"></param>
     /// <returns></returns>
-    private string FormatComment(LiveBroadcast[] items)
+    private string FormatComment(MessagesResource.LiveChatMessages[] items)
     {
         var comment = "";
 
@@ -278,7 +278,7 @@ public class YouTubeLiveController : MonoBehaviour
             var snip = item.snippet;
             var author = item.authorDetails;
 
-            comment += $"コメント:({author.displayName})「{snip.displayMessage}」\n";
+            comment += $"コメント:[{item.snippet.publishedAt}]({author.displayName})「{snip.displayMessage}」\n";
         }
         return comment;
     }
@@ -308,29 +308,51 @@ public class YouTubeLiveController : MonoBehaviour
     public class LiveBroadcast
     {
         public Snippet snippet;
-        public Author authorDetails;
+        [Serializable]
+        public class Snippet
+        {
+            public string title;
+            public string liveChatId;
+            public string displayMessage;
+            public Dictionary<string, Thumbnail> thumbnails; // key: サムネイル名
+                    
+            [Serializable]
+            public class Thumbnail
+            {
+                public string url;
+                public int width;
+                public int  height;
+            }
+        }
     }
 
     [Serializable]
-    public class Snippet
+    public class MessagesResource
     {
-        public string title;
-        public string liveChatId;
-        public string displayMessage;
-        public Dictionary<string, Thumbnail> thumbnails; // key: サムネイル名
-    }
+        public LiveChatMessages[] items;
+        public string nextPageToken;
 
-    [Serializable]
-    public class Author
-    {
-        public string displayName;
-    }
+        [Serializable]
+        public class LiveChatMessages
+        {
+            public Snippet snippet;
+            public Author authorDetails;
+            [Serializable]
+            public class Snippet
+            {
+                public string liveChatId;
+                /// <summary>
+                /// メッセージが最初に公開された日時。値は ISO 8601（YYYY-MM-DDThh:mm:ss.sZ）形式で指定します。
+                /// </summary>
+                public string publishedAt;
+                public string displayMessage;
+            }
 
-    [Serializable]
-    public class Thumbnail
-    {
-        public string url;
-        public int width;
-        public int  height;
+            [Serializable]
+            public class Author
+            {
+                public string displayName;
+            }
+        }
     }
 }
