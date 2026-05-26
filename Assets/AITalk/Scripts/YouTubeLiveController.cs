@@ -37,8 +37,8 @@ public class YouTubeLiveController : MonoBehaviour
     private string chatId = ""; // 配信中のチャットID
 
     private Token token = null; // 認証コードから取得されるトークン
-    private SynchronizationContext mainContext; // Unityのライフサイクルに戻るためのメインスレッド
 
+    private LiveBroadcast targetLive = null;    // 連携対象ライブ
     /// <summary>
     /// Youtube配信からコメントを受け取った場合に通知する
     /// </summary>
@@ -69,12 +69,15 @@ public class YouTubeLiveController : MonoBehaviour
         }
     }
 
+    public void SetTarget(LiveBroadcast target)
+    {
+        this.targetLive = target;
+    }
+
 
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        // メインスレッドで実行しておく
-        mainContext = SynchronizationContext.Current;
     }
     
     private IEnumerator WaitRedirectRoutine()
@@ -143,7 +146,7 @@ public class YouTubeLiveController : MonoBehaviour
         Debug.LogError(request.downloadHandler.text);
     }
 
-    public void StartLive()
+    public void RequestLiveList()
     {
         StartCoroutine(RequestLiveRoutine());
     }
@@ -222,12 +225,13 @@ public class YouTubeLiveController : MonoBehaviour
         this.chatId = liveBroadcast.items[0].snippet.liveChatId;
     }
 
+    public void StartCommentRoutine()
+    {
+        StartCoroutine(RequestCommentRoutine());
+    }
     private IEnumerator RequestCommentRoutine()
     {
         Debug.Log("Start RequestCommentRoutine");
-
-        yield return RequestToken();
-        yield return RequestChatId();
 
         string page_token = "";
         while (this.enabled)
@@ -235,7 +239,7 @@ public class YouTubeLiveController : MonoBehaviour
             // GETパラメータを構築
             var queryString = HttpUtility.ParseQueryString("");
             queryString.Add("part", "snippet,authorDetails"); // レスポンスに含めるリソースプロパティ(カンマ区切り)
-            queryString.Add("liveChatId", this.chatId);  // コメントを取得する対象のチャット
+            queryString.Add("liveChatId", this.targetLive.snippet.liveChatId);  // コメントを取得する対象のチャット
             queryString.Add("page_token", page_token);  // ページトークンを指定することで、前回からの差分コメントのみ取得できる
 
             // URIとクエリをマージ

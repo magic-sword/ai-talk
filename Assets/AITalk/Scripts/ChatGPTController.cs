@@ -91,8 +91,9 @@ public class ChatGPTController : MonoBehaviour
         }
     }
 
-    public async Task<string> RequestAsync(string message)
+    public async void RequestAsync(string message)
     {
+        Debug.Log("Start Request ChatGPT:" + message);
         // 送信内容を構築
         AddMessage(message);
         options.messages = new List<ChatGPTMessageModel>() {
@@ -136,19 +137,10 @@ public class ChatGPTController : MonoBehaviour
         var responseMessage = responseObject.choices[0].message.content;
         Debug.Log("ChatGPT:" + responseMessage);
         AddMessage(responseMessage, true);
-        return responseMessage;
     }
 
     public async void SendTestMessage(){
-        await RequestAsync(this.testMessage);
-    }
-
-    public void RequestMessage(string message)
-    {
-        Task.Run(async () =>
-        {
-            var res = await RequestAsync(message);
-        });
+        RequestAsync(this.testMessage);
     }
 
     [Serializable]
