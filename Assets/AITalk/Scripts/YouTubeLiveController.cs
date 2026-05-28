@@ -34,7 +34,6 @@ public class YouTubeLiveController : MonoBehaviour
     private Token token = null; // 認証コードから取得されるトークン
     private LiveBroadcast targetLive = null;    // 連携対象ライブ
     public CheckPanelController.StatusEvent OnCheckLive;
-    private string chatId = ""; // 配信中のチャットID
     /// <summary>
     /// Youtube配信からコメントを受け取った場合に通知する
     /// </summary>
@@ -183,6 +182,14 @@ public class YouTubeLiveController : MonoBehaviour
     }
     private IEnumerator RequestToken()
     {
+        if(this.apiKey == null)
+        {
+            this.OnCheckAPIKey.Invoke(
+                CheckPanelController.Status.Error
+                , "APIKeyが設定されていません"
+            );
+            yield break;
+        }
         var web = this.apiKey.installed;
         var tokenUrl = "https://oauth2.googleapis.com/token";
         var content = new Dictionary<string,string> () {
@@ -218,6 +225,10 @@ public class YouTubeLiveController : MonoBehaviour
         if(this.token == null)
         {
             yield return RequestToken();
+            if(this.token == null)
+            {
+                yield break;
+            }
         }
 
         // GETパラメータを構築
