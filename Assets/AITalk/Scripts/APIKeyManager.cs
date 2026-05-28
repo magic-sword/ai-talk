@@ -2,50 +2,10 @@ using System.Collections.Generic;
 using UnityEngine;
 using SFB;
 using System.IO;
+using System;
 
 public class APIKeyManager : MonoBehaviour
 {
-    [System.Serializable]
-    public class KeyValue
-    {
-        public string key;
-        public string value;
-    }
-
-    [System.Serializable]
-    public class SerializableDictionary
-    {
-        public List<KeyValue> keyValues = new List<KeyValue>();
-            // インデクサーの定義
-        public string this[string key]
-        {
-            get
-            { 
-                var finded = keyValues.Find(entry => entry.key == key);
-                if(finded == null)
-                {
-                    Debug.LogWarning($"key:{key} が辞書内に存在しません");
-                    return null;
-                }
-                return finded.value;
-            }
-            set 
-            { 
-                var finded = keyValues.Find(entry => entry.key == key);
-                if(finded == null)
-                {
-                    var entry = new KeyValue();
-                    entry.key = key;
-                    entry.value = value;
-                    keyValues.Add(entry);
-                    return;
-                }
-                finded.value = value; 
-            } 
-        }
-    }
-
-
     public static APIKeyManager Instance;
     
     public SerializableDictionary keyPaths = new SerializableDictionary();
@@ -77,5 +37,46 @@ public class APIKeyManager : MonoBehaviour
         string filePath = this.keyPaths[key];
         string text = File.ReadAllText(filePath);
         return text;
+    }
+
+    
+    [Serializable]
+    public class KeyValue
+    {
+        public string key;
+        public string value;
+    }
+
+    [Serializable]
+    public class SerializableDictionary
+    {
+        public List<KeyValue> keyValues = new List<KeyValue>();
+            // インデクサーの定義
+        public string this[string key]
+        {
+            get
+            { 
+                var finded = keyValues.Find(entry => entry.key == key);
+                if(finded == null)
+                {
+                    Debug.LogWarning($"key:{key} が辞書内に存在しません");
+                    return null;
+                }
+                return finded.value;
+            }
+            set 
+            { 
+                var finded = keyValues.Find(entry => entry.key == key);
+                if(finded == null)
+                {
+                    var entry = new KeyValue();
+                    entry.key = key;
+                    entry.value = value;
+                    keyValues.Add(entry);
+                    return;
+                }
+                finded.value = value; 
+            } 
+        }
     }
 }

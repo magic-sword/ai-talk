@@ -2,7 +2,6 @@ using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Net;
-using System.Threading;
 using System.Threading.Tasks;
 using System.Web;
 using UnityEngine;
@@ -29,16 +28,13 @@ public class YouTubeLiveController : MonoBehaviour
     /// 機密情報なため、外部ファイルとして保管しGit上にはコミットしない
     /// </summary>
     private APIKey apiKey;
-
+    public CheckPanelController.StatusEvent OnCheckAPIKey;
     private string authCode = ""; // API Keyから取得した認証コード
-
-    public string liveId = "xxx";
-
-    private string chatId = ""; // 配信中のチャットID
-
+    public CheckPanelController.StatusEvent OnCheckAuthCode;
     private Token token = null; // 認証コードから取得されるトークン
-
     private LiveBroadcast targetLive = null;    // 連携対象ライブ
+    public CheckPanelController.StatusEvent OnCheckLive;
+    private string chatId = ""; // 配信中のチャットID
     /// <summary>
     /// Youtube配信からコメントを受け取った場合に通知する
     /// </summary>
@@ -53,8 +49,13 @@ public class YouTubeLiveController : MonoBehaviour
     {
         get
         {
+            string redirect = this.apiKey?.installed?.redirect_uris[0] ?? "";
+            if(redirect == "")
+            {
+                ErrorPopper.PopError("APIKeyからリダイレクトURLを取得できませんでした。\nファイルの形式を確認してください");
+            }
             // リダイレクトを受け取るポート番号が競合しないように指定しておく
-            return $"{this.apiKey.installed.redirect_uris[0]}:{port}/";
+            return $"{redirect}:{port}/";
         }
     }
 
@@ -73,13 +74,68 @@ public class YouTubeLiveController : MonoBehaviour
     {
         this.targetLive = target;
     }
-
-
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-    }
     
+    public void LoadAPIKey()
+    {
+        try
+        {
+            var text = APIKeyManager.Instance.LoadFile("youtube");
+            this.apiKey = JsonUtility.FromJson<APIKey>(text);
+            OnCheckAuthCode.Invoke(
+                CheckPanelController.Status.OK
+                , "APIKey読み込み完了"
+            );
+        }catch(Exception e)
+        {
+            OnCheckAuthCode.Invoke(
+                CheckPanelController.Status.Error
+                , "APIKeyファイルの読み込みに失敗しました"
+            );
+            ErrorPopper.PopError(e.Message);
+        }
+
+    }
+    public void StartAuth()
+    {
+        if(this.apiKey == null)
+        {
+            OnCheckAuthCode.Invoke(
+                CheckPanelController.Status.Error
+                , "APIKeyファイルを設定してください"
+            );
+            return;
+        }
+        try
+        {
+            var web = this.apiKey.installed;
+            var queryString = HttpUtility.ParseQueryString("");
+            queryString.Add("response_type", "code");  // 認証コードの返却パラメータを指定
+            queryString.Add("client_id", web.client_id);  // アプリケーションのクライアント ID
+            queryString.Add("redirect_uri", this.RedirectUri);  // 認可フロー完了後にリダイレクトする場所を指定
+            queryString.Add("scope", "https://www.googleapis.com/auth/youtube.readonly");  // アクセスするリソースを指定
+            queryString.Add("access_type", "offline"); // アクセストークンの更新が必要になったとき、ユーザーがブラウザにいなくても更新可能にする
+
+            // URIとクエリをマージ
+            var uriBuilder = new UriBuilder(web.auth_uri) {
+                Query = queryString.ToString()
+            };
+            var auth_uri = uriBuilder.Uri.ToString();
+
+            Debug.Log($"authUrl: {auth_uri}");
+            Application.OpenURL(auth_uri);
+
+            // 認証完了後のリダイレクトを待機
+            StartCoroutine(WaitRedirectRoutine());
+        }catch(Exception e)
+        {
+            OnCheckAuthCode.Invoke(
+                CheckPanelController.Status.Error
+                , "Google認証を開始できませんでした。APIKeyの設定を確認してください"
+            );
+            ErrorPopper.PopError(e.Message);
+        }
+
+    }   
     private IEnumerator WaitRedirectRoutine()
     {
         listener.Prefixes.Add(this.RedirectUri);
@@ -105,56 +161,25 @@ public class YouTubeLiveController : MonoBehaviour
         {
             listener.Stop();
         }
-    }
-    public void StartAuth()
-    {
-        var text = APIKeyManager.Instance.LoadFile("youtube");
-        this.apiKey = JsonUtility.FromJson<APIKey>(text);
 
-        var web = this.apiKey.installed;
-        var queryString = HttpUtility.ParseQueryString("");
-        queryString.Add("response_type", "code");  // 認証コードの返却パラメータを指定
-        queryString.Add("client_id", web.client_id);  // アプリケーションのクライアント ID
-        queryString.Add("redirect_uri", this.RedirectUri);  // 認可フロー完了後にリダイレクトする場所を指定
-        queryString.Add("scope", "https://www.googleapis.com/auth/youtube.readonly");  // アクセスするリソースを指定
-        queryString.Add("access_type", "offline"); // アクセストークンの更新が必要になったとき、ユーザーがブラウザにいなくても更新可能にする
-
-        // URIとクエリをマージ
-        var uriBuilder = new UriBuilder(web.auth_uri) {
-            Query = queryString.ToString()
-        };
-        var auth_uri = uriBuilder.Uri.ToString();
-
-        Debug.Log($"authUrl: {auth_uri}");
-        Application.OpenURL(auth_uri);
-
-        // 認証完了後のリダイレクトを待機
-        StartCoroutine(WaitRedirectRoutine());
-    }
-
-
-    private IEnumerator SendWebRequest(UnityWebRequest request)
-    {
-        yield return request.SendWebRequest();
-
-        if(request.result == UnityWebRequest.Result.Success)
+        if(this.authCode == "")
         {
+            OnCheckAuthCode.Invoke(
+                CheckPanelController.Status.Error
+                , "Google認証コードを取得できませんでした"
+            );
             yield break;
         }
 
-        // エラー内容を出力
-        Debug.LogError(request.downloadHandler.text);
+        OnCheckAuthCode.Invoke(
+            CheckPanelController.Status.OK
+            , "Google認証完了"
+        );
     }
 
     public void RequestLiveList()
     {
-        StartCoroutine(RequestLiveRoutine());
-    }
-
-    private IEnumerator RequestLiveRoutine()
-    {
-        yield return RequestToken();
-        yield return RequesLiveList();
+        StartCoroutine(RequesLiveList());
     }
     private IEnumerator RequestToken()
     {
@@ -169,7 +194,16 @@ public class YouTubeLiveController : MonoBehaviour
             { "access_type", "offline" },
         };
         var req = UnityWebRequest.Post (tokenUrl, content);
-        yield return SendWebRequest(req);
+        yield return req.SendWebRequest();
+        if(req.result != UnityWebRequest.Result.Success)
+        {
+            OnCheckLive.Invoke(
+                CheckPanelController.Status.Error
+                , "アクセストークンの取得に失敗しました"
+            );
+            ErrorPopper.PopError(req.downloadHandler.text);
+            Debug.LogError(req.downloadHandler.text);
+        }
 
         this.token = JsonUtility.FromJson<Token>(req.downloadHandler.text); 
     }
@@ -181,48 +215,38 @@ public class YouTubeLiveController : MonoBehaviour
     /// <returns></returns>
     private IEnumerator RequesLiveList()
     {
+        if(this.token == null)
+        {
+            yield return RequestToken();
+        }
+
         // GETパラメータを構築
         var queryString = HttpUtility.ParseQueryString("");
         queryString.Add("part", "snippet,status");  // レスポンスに含めるリソースプロパティ(カンマ区切り)
         queryString.Add("mine", "true");  // フィルタ:認証されたユーザーが所有する
 
         // URIとクエリをマージ
-		var uriBuilder = new System.UriBuilder("https://www.googleapis.com/youtube/v3/liveBroadcasts") {
+		var uriBuilder = new UriBuilder("https://www.googleapis.com/youtube/v3/liveBroadcasts") {
 			Query = queryString.ToString()
 		};
 
         using var req = UnityWebRequest.Get(uriBuilder.Uri);
         
         req.SetRequestHeader ("Authorization", this.Authorization);
-        yield return SendWebRequest(req);
+        yield return req.SendWebRequest();
+        if(req.result != UnityWebRequest.Result.Success)
+        {
+            OnCheckLive.Invoke(
+                CheckPanelController.Status.Error
+                , "ライブ一覧の取得に失敗しました"
+            );
+            ErrorPopper.PopError(req.downloadHandler.text);
+            Debug.LogError(req.downloadHandler.text);
+            yield break;
+        }
 
         var resource = JsonConvert.DeserializeObject<BroadcastResource>(req.downloadHandler.text);
         this.onLiveList.Invoke(new List<LiveBroadcast>(resource.items));
-    }
-
-    /// <summary>
-    /// YouTube Live Streaming APIを使って、ライブ中のチャットのIDを取得する
-    /// 配信中のライブIDの指定が必要
-    /// 認証された接続トークンを取得しておく必要がある
-    /// </summary>
-    private IEnumerator RequestChatId()
-    {
-        // GETパラメータを構築
-        var queryString = HttpUtility.ParseQueryString("");
-        queryString.Add("part", "snippet");  // レスポンスに含めるリソースプロパティ(カンマ区切り)
-        queryString.Add("id", this.liveId);  // ライブID
-
-        // URIとクエリをマージ
-		var uriBuilder = new System.UriBuilder("https://www.googleapis.com/youtube/v3/liveBroadcasts") {
-			Query = queryString.ToString()
-		};
-
-        var req = UnityWebRequest.Get(uriBuilder.Uri);
-        req.SetRequestHeader ("Authorization", this.Authorization);
-        yield return SendWebRequest(req);
-        var liveBroadcast = JsonUtility.FromJson<BroadcastResource> (req.downloadHandler.text);
-
-        this.chatId = liveBroadcast.items[0].snippet.liveChatId;
     }
 
     public void StartCommentRoutine()
@@ -249,7 +273,14 @@ public class YouTubeLiveController : MonoBehaviour
             
             var req = UnityWebRequest.Get(uriBuilder.Uri);
             req.SetRequestHeader ("Authorization", this.Authorization);
-            yield return SendWebRequest(req);
+            yield return req.SendWebRequest();;
+            if(req.result != UnityWebRequest.Result.Success)
+            {
+                // エラー内容を出力
+                ErrorPopper.PopError(req.downloadHandler.text);
+                Debug.LogError(req.downloadHandler.text);
+                yield break;
+            }
 
             var liveChat = JsonUtility.FromJson<MessagesResource> (req.downloadHandler.text);
             var comment = FormatComment(liveChat.items);
@@ -282,14 +313,6 @@ public class YouTubeLiveController : MonoBehaviour
         }
         return comment;
     }
-
-
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
-
 
     [Serializable]
     public class Token
