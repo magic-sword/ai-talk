@@ -4,8 +4,8 @@ using UnityEngine.Events;
 
 public class BroadcastListView : MonoBehaviour
 {
-    [SerializeField]
-    private GameObject prefab;
+    [SerializeField] GameObject prefab;
+    [SerializeField] GameObject container;
 
     private List<BroadcastView> views = new();
 
@@ -28,11 +28,12 @@ public class BroadcastListView : MonoBehaviour
 
     public void SetList(List<YouTubeLiveController.LiveBroadcast> list)
     {
+        this.gameObject.SetActive(true);    //非表示であれば表示する
         Clear();
 
         foreach(var data in list)
         {
-            var view = Instantiate(prefab, this.transform); // プレハブからUIをクローン
+            var view = Instantiate(prefab, container.transform); // プレハブからUIをクローン
             var target = view.GetComponent<BroadcastView>();
 
             target.Broadcast = data;    // UIへ表示データを設定
