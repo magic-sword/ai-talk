@@ -25,12 +25,14 @@ public class CheckPanelController : MonoBehaviour
     {
         okImage.gameObject.SetActive(true);
         errorImage.gameObject.SetActive(false);
+        this.gameObject.SetActive(true);
     }
 
     private void SetError()
     {
         okImage.gameObject.SetActive(false);
         errorImage.gameObject.SetActive(true);
+        this.gameObject.SetActive(true);
     }
 
     /// <summary>
@@ -38,8 +40,7 @@ public class CheckPanelController : MonoBehaviour
     /// </summary>
     private void SetIdle()
     {
-        okImage.gameObject.SetActive(false);
-        errorImage.gameObject.SetActive(false);
+        this.gameObject.SetActive(false);
     }
     private void SetMessage(string messages)
     {

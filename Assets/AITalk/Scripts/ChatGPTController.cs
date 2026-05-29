@@ -7,10 +7,12 @@ using System.Threading.Tasks;
 
 public class ChatGPTController : MonoBehaviour
 {
-    private string apiKey;
+    private string apiKey = "";
+    public CheckPanelController.StatusEvent OnCheckAPIKey;
     private string  apiUrl = "https://api.openai.com/v1/chat/completions";
 
     public ChatGPTMessageModel systemMessage = new ChatGPTMessageModel();
+    public CheckPanelController.StatusEvent OnCheckSystemFile;
 
     /// <summary>
     /// 連続した会話を実現するため、ユーザーのメッセージ内容とチャットボットの回答内容を記録しておく
@@ -48,20 +50,49 @@ public class ChatGPTController : MonoBehaviour
 
     public void LoadAPIKey()
     {
-        this.apiKey = APIKeyManager.Instance.LoadFile("chatgpt");
+        try
+        {
+            this.apiKey = APIKeyManager.Instance.LoadFile("chatgpt");
 
-        // 不要な改行が入っていると、リクエストヘッダーでエラーとなるため削除する
-        this.apiKey = this.apiKey.Replace("\n", "").Replace("\r\n", "");
+            // 不要な改行が入っていると、リクエストヘッダーでエラーとなるため削除する
+            this.apiKey = this.apiKey.Replace("\n", "").Replace("\r\n", "");
+            OnCheckAPIKey.Invoke(
+                CheckPanelController.Status.OK
+                , "APIKey読み込み完了"
+            );
+        }catch(Exception e)
+        {
+            OnCheckAPIKey.Invoke(
+                CheckPanelController.Status.Error
+                , "APIKeyファイルの読み込みに失敗しました"
+            );
+            ErrorPopper.PopError(e.Message);
+        }
     }
 
     public void LoadSystem()
     {
-        var systemText = APIKeyManager.Instance.LoadFile("chatgpt-system");
-        this.systemMessage = new ChatGPTMessageModel()
+        try
         {
-            role = "system",
-            content = systemText
-        };
+            var systemText = APIKeyManager.Instance.LoadFile("chatgpt-system");
+            this.systemMessage = new ChatGPTMessageModel()
+            {
+                role = "system",
+                content = systemText
+            };
+            OnCheckSystemFile.Invoke(
+                CheckPanelController.Status.OK
+                , "システムファイル読み込み完了"
+            );
+        }catch(Exception e)
+        {
+            OnCheckSystemFile.Invoke(
+                CheckPanelController.Status.Error
+                , "APIKeyファイルの読み込みに失敗しました"
+            );
+            ErrorPopper.PopError(e.Message);
+            
+        }
     }
 
     /// <summary>
@@ -93,6 +124,11 @@ public class ChatGPTController : MonoBehaviour
 
     public async void RequestAsync(string message)
     {
+        if(this.apiKey == "")
+        {
+            LoadAPIKey();
+        }
+
         Debug.Log("Start Request ChatGPT:" + message);
         // 送信内容を構築
         AddMessage(message);
@@ -128,8 +164,10 @@ public class ChatGPTController : MonoBehaviour
         if (request.result == UnityWebRequest.Result.ConnectionError ||
             request.result == UnityWebRequest.Result.ProtocolError)
         {
+            // エラーメッセージをユーザーに表示して中止
+            ErrorPopper.PopError(request.downloadHandler.text);
             Debug.LogError(request.error);
-            throw new Exception(request.error);
+            return;
         }
 
         var responseString = request.downloadHandler.text;

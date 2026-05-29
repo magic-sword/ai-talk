@@ -72,6 +72,10 @@ public class YouTubeLiveController : MonoBehaviour
     public void SetTarget(LiveBroadcast target)
     {
         this.targetLive = target;
+        OnCheckLive.Invoke(
+            CheckPanelController.Status.OK
+            , target.snippet.title
+        );
     }
     
     public void LoadAPIKey()
@@ -80,13 +84,13 @@ public class YouTubeLiveController : MonoBehaviour
         {
             var text = APIKeyManager.Instance.LoadFile("youtube");
             this.apiKey = JsonUtility.FromJson<APIKey>(text);
-            OnCheckAuthCode.Invoke(
+            OnCheckAPIKey.Invoke(
                 CheckPanelController.Status.OK
                 , "APIKey読み込み完了"
             );
         }catch(Exception e)
         {
-            OnCheckAuthCode.Invoke(
+            OnCheckAPIKey.Invoke(
                 CheckPanelController.Status.Error
                 , "APIKeyファイルの読み込みに失敗しました"
             );
