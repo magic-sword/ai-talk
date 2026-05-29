@@ -7,7 +7,7 @@ public class ErrorPopper : MonoBehaviour
 {
     private static ErrorPopper instance;
 
-    TMP_Text text;
+    [SerializeField] TMP_Text text;
     void Awake()
     {
         if (instance == null)

@@ -127,7 +127,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 516200936115379944, guid: 46f0caff252822242922c75684291456, type: 3}
       propertyPath: m_SizeDelta.x
-      value: 0
+      value: 122.339966
       objectReference: {fileID: 0}
     - target: {fileID: 516200936115379944, guid: 46f0caff252822242922c75684291456, type: 3}
       propertyPath: m_SizeDelta.y
@@ -167,7 +167,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 516200936115379944, guid: 46f0caff252822242922c75684291456, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -43
+      value: -30
       objectReference: {fileID: 0}
     - target: {fileID: 516200936115379944, guid: 46f0caff252822242922c75684291456, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -280,11 +280,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 7403795718672154847, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
       propertyPath: m_SizeDelta.x
-      value: -681.8601
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7403795718672154847, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
       propertyPath: m_SizeDelta.y
-      value: -285.4
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 7403795718672154847, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
       propertyPath: m_LocalPosition.x
@@ -358,6 +358,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 408899231558912498, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2767558872697641931}
+    - targetCorrespondingSourceObject: {fileID: 408899231558912498, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 662755587707980003}
   m_SourcePrefab: {fileID: 100100000, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
 --- !u!1 &3936797159720962862 stripped
 GameObject:
@@ -379,8 +382,8 @@ MonoBehaviour:
   m_Padding:
     m_Left: 20
     m_Right: 20
-    m_Top: 20
-    m_Bottom: 20
+    m_Top: 10
+    m_Bottom: 10
   m_ChildAlignment: 4
   m_Spacing: 5
   m_ChildForceExpandWidth: 0
@@ -488,6 +491,20 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
+--- !u!114 &662755587707980003
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3936797159720962862}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3245ec927659c4140ac4f8d17403cc18, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: UnityEngine.UI::UnityEngine.UI.ContentSizeFitter
+  m_HorizontalFit: 2
+  m_VerticalFit: 2
 --- !u!224 &6174843546102891011 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7403795718672154847, guid: 228b1b87e50b48146825b2ac0af2d0bf, type: 3}
