@@ -19,7 +19,7 @@ public class DictationManager : MonoBehaviour
     /// Low = 2
     /// Rejected = 3
     /// </summary>
-    public ConfidenceLevel level = ConfidenceLevel.High;
+    public ConfidenceLevel level = ConfidenceLevel.Medium;
 
     /// <summary>
     /// マイクへのアクセス許可がない場合に発生するエラーに対するメッセージ

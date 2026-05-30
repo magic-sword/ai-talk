@@ -4,6 +4,8 @@ using System.Text;
 using UnityEngine;
 using UnityEngine.Networking;
 using System.Threading.Tasks;
+using System.Text.RegularExpressions;
+using UnityEngine.Events;
 
 public class ChatGPTController : MonoBehaviour
 {
@@ -23,7 +25,6 @@ public class ChatGPTController : MonoBehaviour
     /// </summary>
     public int maxMessages = 10;
 
-    public string testMessage = "";
 
     private Dictionary<string, string>  headers = new Dictionary<string, string>
     {
@@ -32,21 +33,20 @@ public class ChatGPTController : MonoBehaviour
         {"X-Slack-No-Retry", "1"}
     };
 
-    public ChatGPTCompletionRequestModel options = new ChatGPTCompletionRequestModel()
+    [SerializeField] ChatGPTCompletionRequestModel options = new ChatGPTCompletionRequestModel()
     {
         model = "gpt-5.4"
     };
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
-    {
-        
-    }
 
-    // Update is called once per frame
-    void Update()
-    {
-        
-    }
+    /// <summary>
+    /// 表情検知正規表現
+    /// </summary>
+    [SerializeField] string faceRegularExpression = @"表情\[(.*?)\]\n*(.*)";
+
+    /// <summary>
+    /// GPTの応答から表情を検知した場合に通知する
+    /// </summary>
+    public UnityEvent<string> OnExtractFace = new UnityEvent<string>();
 
     public void LoadAPIKey()
     {
@@ -175,12 +175,37 @@ public class ChatGPTController : MonoBehaviour
         var responseMessage = responseObject.choices[0].message.content;
         Debug.Log("ChatGPT:" + responseMessage);
         AddMessage(responseMessage, true);
+
+        // 表情をメッセージから分離
+        string remainingMessage = ExtractFace(responseMessage);
+        Debug.Log(remainingMessage);
     }
 
-    public async void SendTestMessage(){
-        RequestAsync(this.testMessage);
-    }
+    /// <summary>
+    /// GPTの返答から表情を抜き出す
+    /// </summary>
+    /// <param name="message">GPT応答メッセージ</param>
+    /// <returns>表情抽出後の残りのメッセージ</returns>
+    private string ExtractFace(string message)
+    {
+        // オプションにSinglelineを設定することで、任意文字が改行にも一致させる
+        Regex regex = new Regex(this.faceRegularExpression, RegexOptions.Singleline);
+        var match = regex.Match(message);
 
+        //表情を検知できなければそのまま返す
+        if (!match.Success)
+        {
+            return message;
+        }
+
+        // 表情を通知
+        string face = match.Groups[1].Value;
+        Debug.Log($"表情を検知: {face}");
+        this.OnExtractFace.Invoke(face);
+        
+        // 表情以外のメッセージを返す
+        return match.Groups[2].Value;
+    }
     [Serializable]
     public class ChatGPTMessageModel
     {
