@@ -3936,6 +3936,7 @@ GameObject:
   m_Component:
   - component: {fileID: 744658815}
   - component: {fileID: 744658814}
+  - component: {fileID: 744658816}
   m_Layer: 0
   m_Name: Audio
   m_TagString: Untagged
@@ -4055,6 +4056,18 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &744658816
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 744658813}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 0fc1f1e30bd6b1848bffc1bea457e5f5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::AudioContoroler
 --- !u!1 &769729210 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 6695407960787475790, guid: c5b13aaeb8d2b5c4b80e96910a9cc911, type: 3}
@@ -4994,9 +5007,9 @@ MonoBehaviour:
   OnSynthesisAudio:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 744658814}
-        m_TargetAssemblyTypeName: UnityEngine.AudioSource, UnityEngine
-        m_MethodName: PlayOneShot
+      - m_Target: {fileID: 744658816}
+        m_TargetAssemblyTypeName: AudioController, Assembly-CSharp
+        m_MethodName: PlayVoice
         m_Mode: 0
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
