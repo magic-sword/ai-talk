@@ -204,7 +204,7 @@ public class YouTubeLiveController : MonoBehaviour
             { "grant_type", "authorization_code" },
             { "access_type", "offline" },
         };
-        var req = UnityWebRequest.Post (tokenUrl, content);
+        using var req = UnityWebRequest.Post (tokenUrl, content);
         yield return req.SendWebRequest();
         if(req.result != UnityWebRequest.Result.Success)
         {

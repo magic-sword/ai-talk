@@ -47,6 +47,11 @@ public class ChatGPTController : MonoBehaviour
     /// </summary>
     public UnityEvent<string> OnExtractFace = new UnityEvent<string>();
 
+    /// <summary>
+    /// GPTから受け取ったメッセージを通知する
+    /// </summary>
+    public UnityEvent<string> OnReceiveMessage = new UnityEvent<string>();
+
     public void LoadAPIKey()
     {
         try
@@ -177,7 +182,7 @@ public class ChatGPTController : MonoBehaviour
 
         // 表情をメッセージから分離
         string remainingMessage = ExtractFace(responseMessage);
-        Debug.Log(remainingMessage);
+        this.OnReceiveMessage.Invoke(remainingMessage);
     }
 
     /// <summary>
