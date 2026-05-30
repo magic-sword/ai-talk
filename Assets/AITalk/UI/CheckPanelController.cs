@@ -14,12 +14,6 @@ public class CheckPanelController : MonoBehaviour
 
     [SerializeField]
     TextMeshProUGUI text;
-
-    void Awake()
-    {
-        SetIdle();
-    }
-
     private void SetOK()
     {
         okImage.gameObject.SetActive(true);
@@ -60,6 +54,18 @@ public class CheckPanelController : MonoBehaviour
                 break;
         }
         SetMessage(messages);
+    }
+
+    public void SetStatus(bool ok)
+    {
+        if (ok)
+        {
+            SetOK();
+        }
+        else
+        {
+            SetError();
+        }
     }
 
     public enum Status

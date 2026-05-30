@@ -192,6 +192,7 @@ public class VoiceVoxClient : MonoBehaviour
     /// <param name="text">音声合成をするテキスト</param>
     public void StartSynthesisAudio(string text)
     {
-        StartCoroutine(StartSynthesisAudioRoutine(text));
+        if(this.enabled)
+            StartCoroutine(StartSynthesisAudioRoutine(text));
     }
 }
