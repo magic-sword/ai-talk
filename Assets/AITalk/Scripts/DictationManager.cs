@@ -8,6 +8,11 @@ public class DictationManager : MonoBehaviour
     private DictationRecognizer dictationRecognizer;
 
     /// <summary>
+    /// 送信する際にGPTへ伝えるプレイヤー名前
+    /// </summary>
+    [SerializeField] string playerName = "";
+
+    /// <summary>
     /// フレーズが認識されたときに通知する
     /// </summary>
     public UnityEvent<string> OnDictate;
@@ -50,6 +55,21 @@ public class DictationManager : MonoBehaviour
         dictationRecognizer.DictationError += this.OnDictationError;
     }
 
+    public void SetPlayerName(string name)
+    {
+        this.playerName = name;
+    }
+
+    /// <summary>
+    /// メッセージ送信を実行する
+    /// </summary>
+    /// <param name="message"></param>
+    public void InvokeMessage(string message)
+    {
+        
+        this.OnDictate.Invoke($"{playerName}「{message}」");
+    }
+
     /// <summary>
     /// 音声認識の精度をフィルタして通知する
     /// </summary>
@@ -57,12 +77,12 @@ public class DictationManager : MonoBehaviour
     /// <param name="confidence"></param>
     void FilterLevel(string text, ConfidenceLevel confidence)
     {
+        Debug.Log($"DictationResult: {confidence}\n{text}");
         // 設定よりも認識精度が高ければ通知する
         if(confidence <= this.level)
         {
-            this.OnDictate.Invoke(text);
+            InvokeMessage(text);
         }
-        Debug.Log($"DictationResult: {confidence}\n{text}");
     }
 
     void OnDictationComplete(DictationCompletionCause cause)
