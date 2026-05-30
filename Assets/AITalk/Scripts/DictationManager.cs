@@ -7,6 +7,8 @@ public class DictationManager : MonoBehaviour
 {
     private DictationRecognizer dictationRecognizer;
 
+    bool isRunnning;
+
     /// <summary>
     /// 送信する際にGPTへ伝えるプレイヤー名前
     /// </summary>
@@ -39,7 +41,24 @@ public class DictationManager : MonoBehaviour
     {
         try
         {
+            isRunnning = true;
             dictationRecognizer.Start();
+        }
+        catch (Exception e)
+        {
+            ErrorPopper.PopError($"{errMicAccessMessage} \n\n {e.Message}");
+        }
+    }
+
+    /// <summary>
+    /// 音声認識を停止する
+    /// </summary>
+    public void StopDictate()
+    {
+        try
+        {
+            isRunnning = false;
+            dictationRecognizer.Stop();
         }
         catch (Exception e)
         {
@@ -88,7 +107,9 @@ public class DictationManager : MonoBehaviour
     void OnDictationComplete(DictationCompletionCause cause)
     {
         // 音声認識がタイムアウトしたら再開することで継続する
-        dictationRecognizer.Start();
+        // 実行設定が無効なら再開しない
+        if(isRunnning)
+            dictationRecognizer.Start();
     }
 
     /// <summary>
