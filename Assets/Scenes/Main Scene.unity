@@ -3029,7 +3029,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 2473373129861647539, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_Name
-      value: SystemButton
+      value: DeveloperButton
       objectReference: {fileID: 0}
     - target: {fileID: 5250470215170370143, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.size
@@ -3069,7 +3069,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5250470215170370143, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_MethodName
-      value: LoadSystem
+      value: LoadDeveloper
       objectReference: {fileID: 0}
     - target: {fileID: 5250470215170370143, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_TargetAssemblyTypeName
@@ -3085,7 +3085,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5250470215170370143, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[0].m_Arguments.m_StringArgument
-      value: chatgpt-system
+      value: chatgpt-developer
       objectReference: {fileID: 0}
     - target: {fileID: 5250470215170370143, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_OnClick.m_PersistentCalls.m_Calls.Array.data[1].m_Arguments.m_ObjectArgumentAssemblyTypeName
@@ -3173,7 +3173,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6290600385524490625, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_text
-      value: "\u30B7\u30B9\u30C6\u30E0\u9078\u629E"
+      value: "\u30AD\u30E3\u30E9\u9078\u629E"
       objectReference: {fileID: 0}
     - target: {fileID: 6877132991815147447, guid: 13b4170ff17f4154db13b1d18fa06edd, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3367,7 +3367,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 4609994165947962467, guid: c5b13aaeb8d2b5c4b80e96910a9cc911, type: 3}
       propertyPath: m_AnchoredPosition.y
-      value: -0
+      value: -10
       objectReference: {fileID: 0}
     - target: {fileID: 4609994165947962467, guid: c5b13aaeb8d2b5c4b80e96910a9cc911, type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
@@ -4436,7 +4436,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6392565793752774430, guid: e91d7a9777bdf1644b2c01145236c8a9, type: 3}
       propertyPath: m_Name
-      value: APIKeyCheckPanel
+      value: DeveloperCheckPanel
       objectReference: {fileID: 0}
     - target: {fileID: 6392565793752774430, guid: e91d7a9777bdf1644b2c01145236c8a9, type: 3}
       propertyPath: m_IsActive
@@ -4807,10 +4807,10 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  systemMessage:
+  developerMessage:
     role: 
     content: 
-  OnCheckSystemFile:
+  OnCheckDeveloperFile:
     m_PersistentCalls:
       m_Calls:
       - m_Target: {fileID: 816751569}

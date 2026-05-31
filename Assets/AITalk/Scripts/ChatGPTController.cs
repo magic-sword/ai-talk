@@ -12,8 +12,8 @@ public class ChatGPTController : MonoBehaviour
     public CheckPanelController.StatusEvent OnCheckAPIKey;
     private string  apiUrl = "https://api.openai.com/v1/chat/completions";
 
-    public ChatGPTMessageModel systemMessage = new ChatGPTMessageModel();
-    public CheckPanelController.StatusEvent OnCheckSystemFile;
+    public ChatGPTMessageModel developerMessage = new ChatGPTMessageModel();
+    public CheckPanelController.StatusEvent OnCheckDeveloperFile;
 
     /// <summary>
     /// 連続した会話を実現するため、ユーザーのメッセージ内容とチャットボットの回答内容を記録しておく
@@ -74,25 +74,25 @@ public class ChatGPTController : MonoBehaviour
         }
     }
 
-    public void LoadSystem()
+    public void LoadDeveloper()
     {
         try
         {
-            var systemText = APIKeyManager.Instance.LoadFile("chatgpt-system");
-            this.systemMessage = new ChatGPTMessageModel()
+            var developerText = APIKeyManager.Instance.LoadFile("chatgpt-developer");
+            this.developerMessage = new ChatGPTMessageModel()
             {
-                role = "system",
-                content = systemText
+                role = "developer",
+                content = developerText
             };
-            OnCheckSystemFile.Invoke(
+            OnCheckDeveloperFile.Invoke(
                 CheckPanelController.Status.OK
-                , "システムファイル読み込み完了"
+                , "開発者ファイル読み込み完了"
             );
         }catch(Exception e)
         {
-            OnCheckSystemFile.Invoke(
+            OnCheckDeveloperFile.Invoke(
                 CheckPanelController.Status.Error
-                , "APIKeyファイルの読み込みに失敗しました"
+                , "開発者ファイルの読み込みに失敗しました"
             );
             ErrorPopper.PopError(e.Message);
             
@@ -137,7 +137,7 @@ public class ChatGPTController : MonoBehaviour
         // 送信内容を構築
         AddMessage(message);
         options.messages = new List<ChatGPTMessageModel>() {
-            this.systemMessage
+            this.developerMessage
         };
         options.messages.AddRange(this.messageList);
         var jsonOptions = JsonUtility.ToJson(this.options);
