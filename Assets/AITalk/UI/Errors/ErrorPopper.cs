@@ -24,6 +24,7 @@ public class ErrorPopper : MonoBehaviour
     void ShowMessage(string message)
     {
         text.text = message;
+        GetComponent<RectTransform>().anchoredPosition = Vector3.zero;    // 表示位置に設定
         gameObject.SetActive(true);
     }
 
