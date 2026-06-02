@@ -195,4 +195,9 @@ public class VoiceVoxClient : MonoBehaviour
         if(this.enabled)
             StartCoroutine(StartSynthesisAudioRoutine(text));
     }
+
+    public void SetSpeakerId(string id)
+    {
+        this.speakerId = int.Parse(id);
+    }
 }
